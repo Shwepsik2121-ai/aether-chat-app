@@ -164,7 +164,7 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     
-    <!-- ЗАМЕНИТЕ ВАШ СТАРЫЙ SCRIPT НА ЭТОТ -->
+    <!-- ИСПРАВЛЕННЫЙ SCRIPT -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const chatMessages = document.getElementById('chat-messages');
@@ -174,7 +174,6 @@
             document.getElementById('welcome-time').textContent = getCurrentTime();
             const userId = 'user_' + Math.random().toString(36).substr(2, 9);
             
-            // --- НОВЫЕ ПЕРЕМЕННЫЕ ДЛЯ ЭФФЕКТА ПЕЧАТИ ---
             const TYPEWRITER_SPEED = 5; // мс на символ. Чем меньше, тем быстрее.
             let chunkQueue = [];
             let isProcessingQueue = false;
@@ -241,17 +240,17 @@
                 });
             }
             
-            // --- НОВАЯ ФУНКЦИЯ ДЛЯ ОБРАБОТКИ ОЧЕРЕДИ ---
             function processQueue() {
                 isProcessingQueue = true;
                 
                 typewriterInterval = setInterval(() => {
                     if (chunkQueue.length === 0) {
-                        // Очередь пуста, останавливаем интервал
                         clearInterval(typewriterInterval);
                         isProcessingQueue = false;
                         // Финальная подсветка кода, если он есть
-                        currentBotMessageElement.querySelectorAll('pre code').forEach(hljs.highlightElement);
+                        if (currentBotMessageElement) {
+                           currentBotMessageElement.querySelectorAll('pre code').forEach(hljs.highlightElement);
+                        }
                         return;
                     }
 
@@ -263,10 +262,10 @@
                     fullBotResponse += char;
                     
                     // Рендерим весь текст заново с помощью Markdown
-                    // Это важно, чтобы форматирование (жирный, списки, код) не ломалось
                     currentBotMessageElement.querySelector('.message-text').innerHTML = formatMessageText(fullBotResponse);
 
-                    scrollToBottom();
+                    // ИСПОЛЬЗУЕМ "УМНУЮ" ПРОКРУТКУ ВМЕСТО ОБЫЧНОЙ
+                    smartScrollToBottom();
                     
                     // Если чанк закончился, удаляем его из очереди
                     if (chunkQueue[0].length === 0) {
@@ -314,6 +313,17 @@
             
             function scrollToBottom() {
                 chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+            
+            // НОВАЯ "УМНАЯ" ФУНКЦИЯ ПРОКРУТКИ
+            function smartScrollToBottom() {
+                const scrollThreshold = 100; // Допуск в пикселях. Если пользователь выше, не прокручиваем.
+                const isScrolledToBottom = chatMessages.scrollHeight - chatMessages.clientHeight <= chatMessages.scrollTop + scrollThreshold;
+                
+                // Прокручиваем вниз, только если пользователь и так был внизу
+                if (isScrolledToBottom) {
+                    scrollToBottom();
+                }
             }
             
             function getCurrentTime() {
