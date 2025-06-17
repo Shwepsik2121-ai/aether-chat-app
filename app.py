@@ -31,7 +31,7 @@ db = SQLAlchemy(app)
 # --- КОНФИГУРАЦИЯ GEMINI ---
 API_KEY_CONFIGURED = False
 GEMINI_CLIENT = None
-MODEL_NAME_DEFAULT = "gemini-2.5-flash-preview-05-20"
+MODEL_NAME_DEFAULT = "gemini-2.5-flash"
 MAX_HISTORY_LENGTH = 20
 
 # Системная инструкция
