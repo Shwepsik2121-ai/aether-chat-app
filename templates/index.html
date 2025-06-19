@@ -1,194 +1,588 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <!-- Все ваши теги <head> остаются без изменений -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Эфир Чат-бот (Streaming)</title>
+    <title>Эфир Чат-бот (Enhanced)</title>
     <meta name="color-scheme" content="light dark">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
     <style>
-        /* Все ваши стили <style> остаются без изменений */
         :root {
-            --primary-color: #8ab4f8;
-            --background-color: #1e1e1e;
-            --message-user-bg: #2d2d2d;
-            --message-bot-bg: #252525;
-            --text-color: #e0e0e0;
-            --border-radius: 12px;
-            --input-bg: #2d2d2d;
-            --input-text: #e0e0e0;
-            --border-color: #444;
-            --code-bg: #1a1a1a;
+            --primary-color: #6366f1;
+            --primary-hover: #4f46e5;
+            --background-color: #0f0f23;
+            --surface-color: #1a1a2e;
+            --surface-hover: #16213e;
+            --message-user-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --message-bot-bg: #1e1e2e;
+            --text-color: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --border-color: #334155;
+            --border-radius: 16px;
+            --input-bg: #1e293b;
+            --input-focus: #3b82f6;
+            --success-color: #10b981;
+            --error-color: #ef4444;
+            --warning-color: #f59e0b;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
 
         @media (prefers-color-scheme: light) {
             :root {
-                --primary-color: #4285f4;
-                --background-color: #f5f5f5;
-                --message-user-bg: #e3f2fd;
+                --primary-color: #4f46e5;
+                --primary-hover: #4338ca;
+                --background-color: #f8fafc;
+                --surface-color: #ffffff;
+                --surface-hover: #f1f5f9;
+                --message-user-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 --message-bot-bg: #ffffff;
-                --text-color: #333333;
+                --text-color: #1e293b;
+                --text-secondary: #64748b;
+                --border-color: #e2e8f0;
                 --input-bg: #ffffff;
-                --input-text: #333333;
-                --border-color: #ddd;
-                --code-bg: #f0f0f0;
+                --input-focus: #3b82f6;
             }
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: 'Roboto', sans-serif;
-            background-color: var(--background-color);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--background-color);
             color: var(--text-color);
-            transition: background-color 0.3s, color 0.3s;
             line-height: 1.6;
             height: 100vh;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
+
         .container {
-            max-width: 1200px; margin: 0 auto; padding: 20px;
-            flex: 1; display: flex; flex-direction: column; height: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 16px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            gap: 16px;
         }
+
         header {
-            text-align: center; margin-bottom: 20px; padding: 20px 0;
+            text-align: center;
+            padding: 24px 0 16px;
             border-bottom: 1px solid var(--border-color);
-        }
-        h1 { color: var(--primary-color); margin-bottom: 10px; }
-        .model-selector { margin: 15px 0; }
-        .chat-container {
-            flex: 1; display: flex; flex-direction: column;
-            background-color: var(--message-bot-bg);
+            background: var(--surface-color);
             border-radius: var(--border-radius);
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            overflow: hidden; border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(10px);
         }
-        .chat-messages {
-            flex: 1; padding: 20px; overflow-y: auto;
-            display: flex; flex-direction: column; gap: 15px;
+
+        h1 {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: -0.025em;
         }
-        .message {
-            max-width: 85%; padding: 12px 16px; border-radius: 18px;
-            animation: fadeIn 0.3s ease;
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-bottom: 16px;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+
+        .model-info {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
         }
-        .user-message {
-            align-self: flex-end; background-color: var(--message-user-bg);
-            border-bottom-right-radius: 4px; color: #8ab4f8;
-        }
-        .bot-message {
-            align-self: flex-start; background-color: var(--message-bot-bg);
-            border: 1px solid var(--border-color); border-bottom-left-radius: 4px;
-        }
-        .message-sender { font-weight: 500; margin-bottom: 4px; font-size: 0.85em; color: #5f6368;}
-        .message-time { font-size: 0.7em; color: #9e9e9e; text-align: right; margin-top: 5px; }
-        .input-area {
-            display: flex; padding: 15px;
-            background-color: var(--message-bot-bg); border-top: 1px solid var(--border-color);
-        }
-        #user-input {
-            flex: 1; padding: 12px 15px; border: 1px solid var(--border-color);
-            background-color: var(--input-bg); color: var(--input-text);
-            border-radius: 24px; font-size: 16px; outline: none; transition: all 0.3s;
-        }
-        #user-input:focus { border-color: var(--primary-color); box-shadow: 0 1px 6px rgba(138, 180, 248, 0.3); }
-        #send-button {
-            background-color: var(--primary-color); color: white; border: none;
-            border-radius: 50%; width: 48px; height: 48px; margin-left: 10px;
-            cursor: pointer; transition: background-color 0.3s; display: flex;
-            align-items: center; justify-content: center;
-        }
-        #send-button:hover { background-color: #a8c7fa; }
-        #send-button:disabled { background-color: #666; cursor: not-allowed; }
+
         .model-badge {
-            font-size: 0.7em; background-color: #e8f0fe; color: var(--primary-color);
-            padding: 2px 8px; border-radius: 10px; display: inline-block;
+            background: var(--primary-color);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: var(--shadow);
         }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success-color);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--surface-color);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(10px);
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            scroll-behavior: smooth;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 16px 20px;
+            border-radius: 20px;
+            position: relative;
+            animation: slideInUp 0.3s ease-out;
+            word-wrap: break-word;
+            backdrop-filter: blur(5px);
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .user-message {
+            align-self: flex-end;
+            background: var(--message-user-bg);
+            color: white;
+            border-bottom-right-radius: 8px;
+            box-shadow: var(--shadow);
+        }
+
+        .bot-message {
+            align-self: flex-start;
+            background: var(--message-bot-bg);
+            border: 1px solid var(--border-color);
+            border-bottom-left-radius: 8px;
+            box-shadow: var(--shadow);
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .message-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+        }
+
+        .user-avatar {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .bot-avatar {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .message-text {
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .message-text p {
+            margin-bottom: 12px;
+        }
+
+        .message-text p:last-child {
+            margin-bottom: 0;
+        }
+
+        .message-text ul, .message-text ol {
+            margin-left: 20px;
+            margin-bottom: 12px;
+        }
+
         .message-text pre {
-            background-color: var(--code-bg); padding: 12px; border-radius: 8px;
-            overflow-x: auto; margin: 10px 0; border: 1px solid var(--border-color);
+            background: #1a1a2e;
+            padding: 16px;
+            border-radius: 12px;
+            overflow-x: auto;
+            margin: 12px 0;
+            border: 1px solid var(--border-color);
+            position: relative;
         }
-        .message-text code { font-family: 'Courier New', Courier, monospace; font-size: 0.9em; }
-        .message-text p { margin-bottom: 0.5em; }
-        .message-text ul, .message-text ol { margin-left: 20px; margin-bottom: 0.5em; }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #2d2d2d; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #777; }
-        /* Добавим курсор для индикации печати */
+
+        .message-text code {
+            font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .message-text p code {
+            background: rgba(99, 102, 241, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+
+        .message-time {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-align: right;
+            margin-top: 8px;
+            opacity: 0.7;
+        }
+
+        .input-area {
+            display: flex;
+            padding: 20px;
+            background: var(--surface-color);
+            border-top: 1px solid var(--border-color);
+            gap: 12px;
+            align-items: flex-end;
+        }
+
+        .input-container {
+            flex: 1;
+            position: relative;
+        }
+
+        #user-input {
+            width: 100%;
+            padding: 16px 20px;
+            border: 2px solid var(--border-color);
+            background: var(--input-bg);
+            color: var(--text-color);
+            border-radius: 24px;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+            resize: none;
+            min-height: 56px;
+            max-height: 120px;
+            font-family: inherit;
+        }
+
+        #user-input:focus {
+            border-color: var(--input-focus);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        #user-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .send-button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 56px;
+            height: 56px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow);
+            font-size: 1.1rem;
+        }
+
+        .send-button:hover:not(:disabled) {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .send-button:disabled {
+            background: var(--text-secondary);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-style: italic;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes typing {
+            0%, 80%, 100% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+            40% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .error-message {
+            background: var(--error-color);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin: 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .scroll-to-bottom {
+            position: absolute;
+            bottom: 80px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+        }
+
+        .scroll-to-bottom:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+        }
+
+        .scroll-to-bottom.visible {
+            display: flex;
+        }
+
+        /* Улучшенные скроллбары */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--surface-color);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+            transition: background 0.3s ease;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 8px;
+                gap: 8px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .message {
+                max-width: 90%;
+                padding: 12px 16px;
+            }
+
+            .input-area {
+                padding: 16px;
+            }
+
+            #user-input {
+                padding: 12px 16px;
+                font-size: 16px;
+            }
+
+            .send-button {
+                width: 48px;
+                height: 48px;
+            }
+        }
+
+        /* Темная анимация печати */
         .bot-message .message-text:empty::after {
             content: "▋";
             animation: blink 1s step-end infinite;
+            color: var(--primary-color);
         }
+
         @keyframes blink {
-            from, to { color: transparent; }
-            50% { color: var(--text-color); }
+            from, to { opacity: 0.2; }
+            50% { opacity: 1; }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Эфир Чат-бот</h1>
-            <p>Общайтесь с Эфир на абсолютно любые темы</p>
-            <div class="model-selector">
-                <span>Модель: <span class="model-badge">2.5 Flash</span></span>
+            <h1>Эфир</h1>
+            <p class="subtitle">Умный ассистент нового поколения</p>
+            <div class="model-info">
+                <div class="model-badge">
+                    <div class="status-indicator"></div>
+                    Gemini 2.5 Flash
+                </div>
             </div>
         </header>
         
         <div class="chat-container">
             <div class="chat-messages" id="chat-messages">
                 <div class="message bot-message">
-                    <div class="message-sender">Эфир <span class="model-badge">2.5 Flash</span></div>
-                    <div class="message-text">Привет! Я Эфир на базе Gemini. Я могу предоставить абсолютно любую информацию.</div>
+                    <div class="message-header">
+                        <div class="message-avatar bot-avatar">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <span>Эфир</span>
+                        <div class="model-badge" style="font-size: 0.7rem; padding: 2px 8px;">2.5 Flash</div>
+                    </div>
+                    <div class="message-text">
+                        Привет! 👋 Я Эфир — ваш умный помощник на базе Gemini 2.5 Flash. 
+                        Готов помочь с любыми вопросами: от сложных задач до творческих идей. 
+                        Просто напишите что вас интересует!
+                    </div>
                     <div class="message-time" id="welcome-time"></div>
                 </div>
             </div>
             
             <div class="input-area">
-                <input type="text" id="user-input" placeholder="Введите ваше сообщение..." autocomplete="off">
-                <button id="send-button" disabled>
+                <div class="input-container">
+                    <textarea id="user-input" placeholder="Введите ваше сообщение..." rows="1"></textarea>
+                </div>
+                <button class="send-button" id="send-button" disabled>
                     <i class="fas fa-paper-plane"></i>
                 </button>
             </div>
+            
+            <button class="scroll-to-bottom" id="scroll-to-bottom">
+                <i class="fas fa-chevron-down"></i>
+            </button>
         </div>
     </div>
 
-    <!-- Библиотеки для Markdown и подсветки кода -->
+    <!-- Библиотеки -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     
-    <!-- ИСПРАВЛЕННЫЙ SCRIPT -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const chatMessages = document.getElementById('chat-messages');
             const userInput = document.getElementById('user-input');
             const sendButton = document.getElementById('send-button');
+            const scrollToBottomBtn = document.getElementById('scroll-to-bottom');
             
             document.getElementById('welcome-time').textContent = getCurrentTime();
             const userId = 'user_' + Math.random().toString(36).substr(2, 9);
             
-            const TYPEWRITER_SPEED = 5; // мс на символ. Чем меньше, тем быстрее.
+            const TYPEWRITER_SPEED = 3; // Ускорили анимацию печати
             let chunkQueue = [];
             let isProcessingQueue = false;
             let currentBotMessageElement = null;
             let fullBotResponse = '';
             let typewriterInterval;
+            let isUserScrolling = false;
 
-            userInput.addEventListener('input', () => { sendButton.disabled = !userInput.value.trim(); });
+            // Улучшенная обработка textarea
+            userInput.addEventListener('input', handleInputChange);
+            userInput.addEventListener('keydown', handleKeyDown);
             sendButton.addEventListener('click', sendMessage);
-            userInput.addEventListener('keypress', (e) => {
+            scrollToBottomBtn.addEventListener('click', scrollToBottom);
+
+            // Отслеживание прокрутки пользователем
+            chatMessages.addEventListener('scroll', handleScroll);
+
+            function handleInputChange() {
+                sendButton.disabled = !userInput.value.trim();
+                autoResizeTextarea();
+            }
+
+            function handleKeyDown(e) {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     if (!sendButton.disabled) sendMessage();
                 }
-            });
+            }
+
+            function autoResizeTextarea() {
+                userInput.style.height = 'auto';
+                userInput.style.height = Math.min(userInput.scrollHeight, 120) + 'px';
+            }
+
+            function handleScroll() {
+                const isAtBottom = chatMessages.scrollHeight - chatMessages.clientHeight <= chatMessages.scrollTop + 50;
+                scrollToBottomBtn.classList.toggle('visible', !isAtBottom);
+                
+                // Определяем, скроллит ли пользователь вручную
+                clearTimeout(window.scrollTimeout);
+                isUserScrolling = true;
+                window.scrollTimeout = setTimeout(() => {
+                    isUserScrolling = false;
+                }, 150);
+            }
 
             function sendMessage() {
                 const message = userInput.value.trim();
@@ -196,11 +590,15 @@
                 
                 addMessage('user', message);
                 userInput.value = '';
+                userInput.style.height = 'auto';
                 sendButton.disabled = true;
 
+                // Показываем индикатор печати
+                showTypingIndicator();
+                
                 // Подготавливаем контейнер для ответа бота
                 currentBotMessageElement = createBotMessageElement();
-                fullBotResponse = ''; // Сбрасываем текст предыдущего ответа
+                fullBotResponse = '';
                 
                 fetch('/chat', {
                     method: 'POST',
@@ -208,8 +606,11 @@
                     body: JSON.stringify({ message: message, user_id: userId })
                 })
                 .then(response => {
+                    hideTypingIndicator();
                     if (!response.ok) {
-                         return response.json().then(err => { throw new Error(err.error || 'Ошибка сети') });
+                        return response.json().then(err => { 
+                            throw new Error(err.error || 'Ошибка сети') 
+                        });
                     }
                     
                     const reader = response.body.getReader();
@@ -218,25 +619,31 @@
                     function readStream() {
                         reader.read().then(({ done, value }) => {
                             if (done) {
-                                // Поток завершен, можно остановить обработку
+                                // Финальная обработка
+                                if (currentBotMessageElement) {
+                                    currentBotMessageElement.querySelectorAll('pre code').forEach(hljs.highlightElement);
+                                }
                                 return;
                             }
                             const chunk = decoder.decode(value, { stream: true });
-                            // Добавляем полученный кусок в очередь
                             chunkQueue.push(chunk);
-                            // Запускаем обработчик очереди, если он еще не запущен
+                            
                             if (!isProcessingQueue) {
                                 processQueue();
                             }
                             
-                            readStream(); // Читаем следующий кусок
+                            readStream();
                         });
                     }
                     readStream();
                 })
                 .catch(error => {
+                    hideTypingIndicator();
                     console.error('Ошибка:', error);
-                    addMessage('bot', `Извините, произошла ошибка: ${error.message}`);
+                    showErrorMessage(`Извините, произошла ошибка: ${error.message}`);
+                    if (currentBotMessageElement) {
+                        currentBotMessageElement.remove();
+                    }
                 });
             }
             
@@ -247,27 +654,21 @@
                     if (chunkQueue.length === 0) {
                         clearInterval(typewriterInterval);
                         isProcessingQueue = false;
-                        // Финальная подсветка кода, если он есть
-                        if (currentBotMessageElement) {
-                           currentBotMessageElement.querySelectorAll('pre code').forEach(hljs.highlightElement);
-                        }
                         return;
                     }
 
-                    // Берем первый символ из первого чанка в очереди
                     let char = chunkQueue[0].charAt(0);
                     chunkQueue[0] = chunkQueue[0].substring(1);
-
-                    // Добавляем символ к полному ответу
                     fullBotResponse += char;
                     
-                    // Рендерим весь текст заново с помощью Markdown
-                    currentBotMessageElement.querySelector('.message-text').innerHTML = formatMessageText(fullBotResponse);
+                    // Рендерим текст
+                    if (currentBotMessageElement) {
+                        const messageText = currentBotMessageElement.querySelector('.message-text');
+                        messageText.innerHTML = formatMessageText(fullBotResponse);
+                    }
 
-                    // ИСПОЛЬЗУЕМ "УМНУЮ" ПРОКРУТКУ ВМЕСТО ОБЫЧНОЙ
                     smartScrollToBottom();
                     
-                    // Если чанк закончился, удаляем его из очереди
                     if (chunkQueue[0].length === 0) {
                         chunkQueue.shift();
                     }
@@ -279,50 +680,107 @@
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `message ${sender}-message`;
                 
-                const senderHTML = sender === 'bot' 
-                    ? `<div class="message-sender">Эфир <span class="model-badge">2.5 Flash</span></div>`
-                    : '<div class="message-sender">Вы</div>';
+                const avatar = sender === 'bot' 
+                    ? '<div class="message-avatar bot-avatar"><i class="fas fa-robot"></i></div>'
+                    : '<div class="message-avatar user-avatar"><i class="fas fa-user"></i></div>';
+                
+                const senderName = sender === 'bot' ? 'Эфир' : 'Вы';
+                const badge = sender === 'bot' 
+                    ? '<div class="model-badge" style="font-size: 0.7rem; padding: 2px 8px;">2.5 Flash</div>'
+                    : '';
                 
                 messageDiv.innerHTML = `
-                    ${senderHTML}
+                    <div class="message-header">
+                        ${avatar}
+                        <span>${senderName}</span>
+                        ${badge}
+                    </div>
                     <div class="message-text">${formatMessageText(text)}</div>
                     <div class="message-time">${getCurrentTime()}</div>`;
                 
                 chatMessages.appendChild(messageDiv);
-                // Подсветка синтаксиса для сообщений, которые добавляются целиком (ошибки, юзер)
                 messageDiv.querySelectorAll('pre code').forEach(hljs.highlightElement);
                 scrollToBottom();
+                return messageDiv;
             }
 
             function createBotMessageElement() {
                 const messageDiv = document.createElement('div');
                 messageDiv.className = 'message bot-message';
                 messageDiv.innerHTML = `
-                    <div class="message-sender">Эфир <span class="model-badge">2.5 Flash</span></div>
+                    <div class="message-header">
+                        <div class="message-avatar bot-avatar"><i class="fas fa-robot"></i></div>
+                        <span>Эфир</span>
+                        <div class="model-badge" style="font-size: 0.7rem; padding: 2px 8px;">2.5 Flash</div>
+                    </div>
                     <div class="message-text"></div>
                     <div class="message-time">${getCurrentTime()}</div>`;
                 chatMessages.appendChild(messageDiv);
                 scrollToBottom();
                 return messageDiv;
             }
+
+            function showTypingIndicator() {
+                const indicator = document.createElement('div');
+                indicator.className = 'typing-indicator';
+                indicator.id = 'typing-indicator';
+                indicator.innerHTML = `
+                    <i class="fas fa-robot"></i>
+                    <span>Эфир печатает</span>
+                    <div class="typing-dots">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                `;
+                chatMessages.appendChild(indicator);
+                scrollToBottom();
+            }
+
+            function hideTypingIndicator() {
+                const indicator = document.getElementById('typing-indicator');
+                if (indicator) {
+                    indicator.remove();
+                }
+            }
+
+            function showErrorMessage(text) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.innerHTML = `
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>${text}</span>
+                `;
+                chatMessages.appendChild(errorDiv);
+                scrollToBottom();
+            }
             
             function formatMessageText(text) {
-                // Используем marked.js для преобразования Markdown в HTML
-                return marked.parse(text, { breaks: true, gfm: true });
+                return marked.parse(text, { 
+                    breaks: true, 
+                    gfm: true,
+                    highlight: function(code, lang) {
+                        if (lang && hljs.getLanguage(lang)) {
+                            return hljs.highlight(code, { language: lang }).value;
+                        }
+                        return hljs.highlightAuto(code).value;
+                    }
+                });
             }
             
             function scrollToBottom() {
                 chatMessages.scrollTop = chatMessages.scrollHeight;
+                scrollToBottomBtn.classList.remove('visible');
             }
             
-            // НОВАЯ "УМНАЯ" ФУНКЦИЯ ПРОКРУТКИ
             function smartScrollToBottom() {
-                const scrollThreshold = 100; // Допуск в пикселях. Если пользователь выше, не прокручиваем.
-                const isScrolledToBottom = chatMessages.scrollHeight - chatMessages.clientHeight <= chatMessages.scrollTop + scrollThreshold;
-                
-                // Прокручиваем вниз, только если пользователь и так был внизу
-                if (isScrolledToBottom) {
-                    scrollToBottom();
+                if (!isUserScrolling) {
+                    const scrollThreshold = 100;
+                    const isScrolledToBottom = chatMessages.scrollHeight - chatMessages.clientHeight <= chatMessages.scrollTop + scrollThreshold;
+                    
+                    if (isScrolledToBottom) {
+                        scrollToBottom();
+                    }
                 }
             }
             
@@ -331,6 +789,7 @@
                 return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
             }
             
+            // Фокус на поле ввода при загрузке
             userInput.focus();
         });
     </script>
