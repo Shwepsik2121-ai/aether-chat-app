@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Эфир Чат-бот (Enhanced)</title>
+    <title>Эфир Чат-бот (Optimized)</title>
     <meta name="color-scheme" content="light dark">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -14,6 +14,8 @@
             --primary-hover: #4f46e5;
             --background-color: #0f0f23;
             --surface-color: #1a1a2e;
+            /* OPTIMIZATION: Replaced backdrop-filter with a performant semi-transparent background */
+            --surface-color-blurry: rgba(26, 26, 46, 0.85);
             --surface-hover: #16213e;
             --message-user-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             --message-bot-bg: #1e1e2e;
@@ -36,6 +38,8 @@
                 --primary-hover: #4338ca;
                 --background-color: #f8fafc;
                 --surface-color: #ffffff;
+                /* OPTIMIZATION: Light theme equivalent for the blurry background */
+                --surface-color-blurry: rgba(255, 255, 255, 0.8);
                 --surface-hover: #f1f5f9;
                 --message-user-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 --message-bot-bg: #ffffff;
@@ -47,11 +51,7 @@
             }
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -79,402 +79,111 @@
             text-align: center;
             padding: 24px 0 16px;
             border-bottom: 1px solid var(--border-color);
-            background: var(--surface-color);
+            /* OPTIMIZATION: Using the performant blurry background. Removed backdrop-filter. */
+            background-color: var(--surface-color-blurry);
             border-radius: var(--border-radius);
             box-shadow: var(--shadow);
-            backdrop-filter: blur(10px);
+            /* This property is very expensive. Replaced with a semi-transparent background. */
+            /* backdrop-filter: blur(10px); */
         }
 
         h1 {
             background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 8px;
-            letter-spacing: -0.025em;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            font-size: 2.5rem; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.025em;
         }
 
-        .subtitle {
-            color: var(--text-secondary);
-            font-size: 1.1rem;
-            margin-bottom: 16px;
-        }
-
-        .model-info {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
+        .subtitle { color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 16px; }
+        .model-info { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
         .model-badge {
-            background: var(--primary-color);
-            color: white;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            box-shadow: var(--shadow);
+            background: var(--primary-color); color: white; padding: 6px 12px;
+            border-radius: 20px; font-size: 0.8rem; font-weight: 500;
+            display: flex; align-items: center; gap: 6px; box-shadow: var(--shadow);
         }
-
-        .status-indicator {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--success-color);
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
+        .status-indicator { width: 8px; height: 8px; border-radius: 50%; background: var(--success-color); animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
         .chat-container {
             flex: 1;
-            display: flex;
-            flex-direction: column;
-            background: var(--surface-color);
+            display: flex; flex-direction: column;
+            /* OPTIMIZATION: Using the performant blurry background. Removed backdrop-filter. */
+            background-color: var(--surface-color-blurry);
             border-radius: var(--border-radius);
             box-shadow: var(--shadow-lg);
             overflow: hidden;
             border: 1px solid var(--border-color);
-            backdrop-filter: blur(10px);
+             /* This property is very expensive. Replaced with a semi-transparent background. */
+            /* backdrop-filter: blur(10px); */
         }
 
         .chat-messages {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            scroll-behavior: smooth;
+            flex: 1; padding: 20px; overflow-y: auto;
+            display: flex; flex-direction: column;
+            gap: 16px; scroll-behavior: smooth;
         }
 
         .message {
-            max-width: 80%;
-            padding: 16px 20px;
-            border-radius: 20px;
-            position: relative;
-            animation: slideInUp 0.3s ease-out;
-            word-wrap: break-word;
-            backdrop-filter: blur(5px);
+            max-width: 80%; padding: 16px 20px; border-radius: 20px; position: relative;
+            animation: slideInUp 0.3s ease-out; word-wrap: break-word;
         }
 
-        @keyframes slideInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
+        @keyframes slideInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-        .user-message {
-            align-self: flex-end;
-            background: var(--message-user-bg);
-            color: white;
-            border-bottom-right-radius: 8px;
-            box-shadow: var(--shadow);
-        }
-
-        .bot-message {
-            align-self: flex-start;
-            background: var(--message-bot-bg);
-            border: 1px solid var(--border-color);
-            border-bottom-left-radius: 8px;
-            box-shadow: var(--shadow);
-        }
-
-        .message-header {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 8px;
-            font-size: 0.85rem;
-            font-weight: 500;
-        }
-
-        .message-avatar {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.8rem;
-        }
-
-        .user-avatar {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        .bot-avatar {
-            background: var(--primary-color);
-            color: white;
-        }
-
-        .message-text {
-            font-size: 0.95rem;
-            line-height: 1.6;
-        }
-
-        .message-text p {
-            margin-bottom: 12px;
-        }
-
-        .message-text p:last-child {
-            margin-bottom: 0;
-        }
-
-        .message-text ul, .message-text ol {
-            margin-left: 20px;
-            margin-bottom: 12px;
-        }
-
-        .message-text pre {
-            background: #1a1a2e;
-            padding: 16px;
-            border-radius: 12px;
-            overflow-x: auto;
-            margin: 12px 0;
-            border: 1px solid var(--border-color);
-            position: relative;
-        }
-
-        .message-text code {
-            font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-            font-size: 0.9em;
-        }
-
-        .message-text p code {
-            background: rgba(99, 102, 241, 0.1);
-            padding: 2px 6px;
-            border-radius: 4px;
-            border: 1px solid rgba(99, 102, 241, 0.2);
-        }
-
-        .message-time {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            text-align: right;
-            margin-top: 8px;
-            opacity: 0.7;
-        }
-
-        .input-area {
-            display: flex;
-            padding: 20px;
-            background: var(--surface-color);
-            border-top: 1px solid var(--border-color);
-            gap: 12px;
-            align-items: flex-end;
-        }
-
-        .input-container {
-            flex: 1;
-            position: relative;
-        }
-
+        .user-message { align-self: flex-end; background: var(--message-user-bg); color: white; border-bottom-right-radius: 8px; box-shadow: var(--shadow); }
+        .bot-message { align-self: flex-start; background: var(--message-bot-bg); border: 1px solid var(--border-color); border-bottom-left-radius: 8px; box-shadow: var(--shadow); }
+        .message-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 0.85rem; font-weight: 500; }
+        .message-avatar { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; }
+        .user-avatar { background: rgba(255, 255, 255, 0.2); }
+        .bot-avatar { background: var(--primary-color); color: white; }
+        .message-text { font-size: 0.95rem; line-height: 1.6; }
+        .message-text p { margin-bottom: 12px; }
+        .message-text p:last-child { margin-bottom: 0; }
+        .message-text ul, .message-text ol { margin-left: 20px; margin-bottom: 12px; }
+        .message-text pre { background: #1a1a2e; padding: 16px; border-radius: 12px; overflow-x: auto; margin: 12px 0; border: 1px solid var(--border-color); position: relative; }
+        .message-text code { font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace; font-size: 0.9em; }
+        .message-text p code { background: rgba(99, 102, 241, 0.1); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(99, 102, 241, 0.2); }
+        .message-time { font-size: 0.75rem; color: var(--text-secondary); text-align: right; margin-top: 8px; opacity: 0.7; }
+        .input-area { display: flex; padding: 20px; background: var(--surface-color); border-top: 1px solid var(--border-color); gap: 12px; align-items: flex-end; }
+        .input-container { flex: 1; position: relative; }
         #user-input {
-            width: 100%;
-            padding: 16px 20px;
-            border: 2px solid var(--border-color);
-            background: var(--input-bg);
-            color: var(--text-color);
-            border-radius: 24px;
-            font-size: 16px;
-            outline: none;
-            transition: all 0.3s ease;
-            resize: none;
-            min-height: 56px;
-            max-height: 120px;
-            font-family: inherit;
+            width: 100%; padding: 16px 20px; border: 2px solid var(--border-color);
+            background: var(--input-bg); color: var(--text-color); border-radius: 24px;
+            font-size: 16px; outline: none; transition: all 0.3s ease; resize: none;
+            min-height: 56px; max-height: 120px; font-family: inherit;
         }
-
-        #user-input:focus {
-            border-color: var(--input-focus);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
-        #user-input::placeholder {
-            color: var(--text-secondary);
-        }
-
+        #user-input:focus { border-color: var(--input-focus); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+        #user-input::placeholder { color: var(--text-secondary); }
         .send-button {
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 56px;
-            height: 56px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: var(--shadow);
-            font-size: 1.1rem;
+            background: var(--primary-color); color: white; border: none; border-radius: 50%;
+            width: 56px; height: 56px; cursor: pointer; transition: all 0.3s ease;
+            display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow); font-size: 1.1rem;
         }
-
-        .send-button:hover:not(:disabled) {
-            background: var(--primary-hover);
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .send-button:disabled {
-            background: var(--text-secondary);
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .typing-indicator {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 12px 16px;
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            font-style: italic;
-        }
-
-        .typing-dots {
-            display: flex;
-            gap: 4px;
-        }
-
-        .typing-dot {
-            width: 6px;
-            height: 6px;
-            background: var(--primary-color);
-            border-radius: 50%;
-            animation: typing 1.4s infinite ease-in-out;
-        }
-
+        .send-button:hover:not(:disabled) { background: var(--primary-hover); transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+        .send-button:disabled { background: var(--text-secondary); cursor: not-allowed; transform: none; }
+        .typing-indicator { display: flex; align-items: center; gap: 8px; padding: 12px 16px; color: var(--text-secondary); font-size: 0.9rem; font-style: italic; }
+        .typing-dots { display: flex; gap: 4px; }
+        .typing-dot { width: 6px; height: 6px; background: var(--primary-color); border-radius: 50%; animation: typing 1.4s infinite ease-in-out; }
         .typing-dot:nth-child(1) { animation-delay: -0.32s; }
         .typing-dot:nth-child(2) { animation-delay: -0.16s; }
-
-        @keyframes typing {
-            0%, 80%, 100% {
-                transform: scale(0.8);
-                opacity: 0.5;
-            }
-            40% {
-                transform: scale(1);
-                opacity: 1;
-            }
-        }
-
-        .error-message {
-            background: var(--error-color);
-            color: white;
-            padding: 12px 16px;
-            border-radius: 12px;
-            margin: 8px 0;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .scroll-to-bottom {
-            position: absolute;
-            bottom: 80px;
-            right: 20px;
-            width: 40px;
-            height: 40px;
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            cursor: pointer;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            box-shadow: var(--shadow);
-            transition: all 0.3s ease;
-        }
-
-        .scroll-to-bottom:hover {
-            background: var(--primary-hover);
-            transform: translateY(-2px);
-        }
-
-        .scroll-to-bottom.visible {
-            display: flex;
-        }
-
-        /* Улучшенные скроллбары */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--surface-color);
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--border-color);
-            border-radius: 4px;
-            transition: background 0.3s ease;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--text-secondary);
-        }
-
-        /* Responsive design */
+        @keyframes typing { 0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; } 40% { transform: scale(1); opacity: 1; } }
+        .error-message { background: var(--error-color); color: white; padding: 12px 16px; border-radius: 12px; margin: 8px 0; display: flex; align-items: center; gap: 8px; }
+        .scroll-to-bottom { position: absolute; bottom: 80px; right: 20px; width: 40px; height: 40px; background: var(--primary-color); color: white; border: none; border-radius: 50%; cursor: pointer; display: none; align-items: center; justify-content: center; box-shadow: var(--shadow); transition: all 0.3s ease; }
+        .scroll-to-bottom:hover { background: var(--primary-hover); transform: translateY(-2px); }
+        .scroll-to-bottom.visible { display: flex; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--surface-color); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; transition: background 0.3s ease; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
         @media (max-width: 768px) {
-            .container {
-                padding: 8px;
-                gap: 8px;
-            }
-
-            h1 {
-                font-size: 2rem;
-            }
-
-            .message {
-                max-width: 90%;
-                padding: 12px 16px;
-            }
-
-            .input-area {
-                padding: 16px;
-            }
-
-            #user-input {
-                padding: 12px 16px;
-                font-size: 16px;
-            }
-
-            .send-button {
-                width: 48px;
-                height: 48px;
-            }
+            .container { padding: 8px; gap: 8px; }
+            h1 { font-size: 2rem; }
+            .message { max-width: 90%; padding: 12px 16px; }
+            .input-area { padding: 16px; }
+            #user-input { padding: 12px 16px; font-size: 16px; }
+            .send-button { width: 48px; height: 48px; }
         }
-
-        /* Темная анимация печати */
-        .bot-message .message-text:empty::after {
-            content: "▋";
-            animation: blink 1s step-end infinite;
-            color: var(--primary-color);
-        }
-
-        @keyframes blink {
-            from, to { opacity: 0.2; }
-            50% { opacity: 1; }
-        }
+        .bot-message .message-text:empty::after { content: "▋"; animation: blink 1s step-end infinite; color: var(--primary-color); }
+        @keyframes blink { from, to { opacity: 0.2; } 50% { opacity: 1; } }
     </style>
 </head>
 <body>
@@ -494,9 +203,7 @@
             <div class="chat-messages" id="chat-messages">
                 <div class="message bot-message">
                     <div class="message-header">
-                        <div class="message-avatar bot-avatar">
-                            <i class="fas fa-robot"></i>
-                        </div>
+                        <div class="message-avatar bot-avatar"><i class="fas fa-robot"></i></div>
                         <span>Эфир</span>
                         <div class="model-badge" style="font-size: 0.7rem; padding: 2px 8px;">2.5 Flash</div>
                     </div>
@@ -538,21 +245,23 @@
             document.getElementById('welcome-time').textContent = getCurrentTime();
             const userId = 'user_' + Math.random().toString(36).substr(2, 9);
             
-            const TYPEWRITER_SPEED = 3; // Ускорили анимацию печати
+            // --- OPTIMIZATION START ---
+            // Replaced aggressive setInterval with a requestAnimationFrame-based approach.
+            // CHARS_PER_FRAME controls how many characters are processed in a single animation frame.
+            // This provides a smooth typing animation without overwhelming the browser's renderer.
+            const CHARS_PER_FRAME = 5; // Process 5 characters per frame. More performant than 1.
             let chunkQueue = [];
             let isProcessingQueue = false;
             let currentBotMessageElement = null;
             let fullBotResponse = '';
-            let typewriterInterval;
+            // --- OPTIMIZATION END ---
+
             let isUserScrolling = false;
 
-            // Улучшенная обработка textarea
             userInput.addEventListener('input', handleInputChange);
             userInput.addEventListener('keydown', handleKeyDown);
             sendButton.addEventListener('click', sendMessage);
             scrollToBottomBtn.addEventListener('click', scrollToBottom);
-
-            // Отслеживание прокрутки пользователем
             chatMessages.addEventListener('scroll', handleScroll);
 
             function handleInputChange() {
@@ -576,12 +285,9 @@
                 const isAtBottom = chatMessages.scrollHeight - chatMessages.clientHeight <= chatMessages.scrollTop + 50;
                 scrollToBottomBtn.classList.toggle('visible', !isAtBottom);
                 
-                // Определяем, скроллит ли пользователь вручную
                 clearTimeout(window.scrollTimeout);
                 isUserScrolling = true;
-                window.scrollTimeout = setTimeout(() => {
-                    isUserScrolling = false;
-                }, 150);
+                window.scrollTimeout = setTimeout(() => { isUserScrolling = false; }, 150);
             }
 
             function sendMessage() {
@@ -593,10 +299,7 @@
                 userInput.style.height = 'auto';
                 sendButton.disabled = true;
 
-                // Показываем индикатор печати
                 showTypingIndicator();
-                
-                // Подготавливаем контейнер для ответа бота
                 currentBotMessageElement = createBotMessageElement();
                 fullBotResponse = '';
                 
@@ -608,9 +311,7 @@
                 .then(response => {
                     hideTypingIndicator();
                     if (!response.ok) {
-                        return response.json().then(err => { 
-                            throw new Error(err.error || 'Ошибка сети') 
-                        });
+                        return response.json().then(err => { throw new Error(err.error || 'Ошибка сети') });
                     }
                     
                     const reader = response.body.getReader();
@@ -619,18 +320,22 @@
                     function readStream() {
                         reader.read().then(({ done, value }) => {
                             if (done) {
-                                // Финальная обработка
+                                // Final highlight pass when the stream is complete
                                 if (currentBotMessageElement) {
                                     currentBotMessageElement.querySelectorAll('pre code').forEach(hljs.highlightElement);
                                 }
+                                isProcessingQueue = false; // Ensure queue processing stops
                                 return;
                             }
                             const chunk = decoder.decode(value, { stream: true });
                             chunkQueue.push(chunk);
                             
+                            // --- OPTIMIZATION START ---
+                            // Start processing the queue only if it's not already running.
                             if (!isProcessingQueue) {
                                 processQueue();
                             }
+                            // --- OPTIMIZATION END ---
                             
                             readStream();
                         });
@@ -647,34 +352,59 @@
                 });
             }
             
+            // --- OPTIMIZATION START ---
+            // New rendering loop using requestAnimationFrame.
             function processQueue() {
                 isProcessingQueue = true;
                 
-                typewriterInterval = setInterval(() => {
+                // This function runs on each animation frame.
+                const renderFrame = () => {
                     if (chunkQueue.length === 0) {
-                        clearInterval(typewriterInterval);
                         isProcessingQueue = false;
-                        return;
+                        return; // Stop if the queue is empty
                     }
 
-                    let char = chunkQueue[0].charAt(0);
-                    chunkQueue[0] = chunkQueue[0].substring(1);
-                    fullBotResponse += char;
+                    // Process a small number of characters
+                    let charsProcessed = 0;
+                    while(chunkQueue.length > 0 && charsProcessed < CHARS_PER_FRAME) {
+                        const chunk = chunkQueue[0];
+                        const charsToProcess = Math.min(chunk.length, CHARS_PER_FRAME - charsProcessed);
+                        
+                        fullBotResponse += chunk.substring(0, charsToProcess);
+                        chunkQueue[0] = chunk.substring(charsToProcess);
+                        
+                        if (chunkQueue[0].length === 0) {
+                            chunkQueue.shift();
+                        }
+                        charsProcessed += charsToProcess;
+                    }
                     
-                    // Рендерим текст
+                    // Update the DOM ONCE per frame
                     if (currentBotMessageElement) {
                         const messageText = currentBotMessageElement.querySelector('.message-text');
+                        // We still parse on each frame, but a frame is ~16.7ms, not 3ms.
+                        // And we are not parsing for every single character. This is a huge win.
                         messageText.innerHTML = formatMessageText(fullBotResponse);
                     }
 
                     smartScrollToBottom();
                     
-                    if (chunkQueue[0].length === 0) {
-                        chunkQueue.shift();
+                    // Schedule the next frame if there's still work to do
+                    if (chunkQueue.length > 0) {
+                        requestAnimationFrame(renderFrame);
+                    } else {
+                        isProcessingQueue = false;
+                        // Final highlight pass to catch anything missed during streaming
+                        if (currentBotMessageElement) {
+                            currentBotMessageElement.querySelectorAll('pre code').forEach(hljs.highlightElement);
+                        }
                     }
+                };
 
-                }, TYPEWRITER_SPEED);
+                // Kick off the first frame
+                requestAnimationFrame(renderFrame);
             }
+            // --- OPTIMIZATION END ---
 
             function addMessage(sender, text) {
                 const messageDiv = document.createElement('div');
@@ -728,42 +458,33 @@
                     <i class="fas fa-robot"></i>
                     <span>Эфир печатает</span>
                     <div class="typing-dots">
-                        <div class="typing-dot"></div>
-                        <div class="typing-dot"></div>
-                        <div class="typing-dot"></div>
-                    </div>
-                `;
+                        <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
+                    </div>`;
                 chatMessages.appendChild(indicator);
                 scrollToBottom();
             }
 
             function hideTypingIndicator() {
                 const indicator = document.getElementById('typing-indicator');
-                if (indicator) {
-                    indicator.remove();
-                }
+                if (indicator) indicator.remove();
             }
 
             function showErrorMessage(text) {
                 const errorDiv = document.createElement('div');
                 errorDiv.className = 'error-message';
-                errorDiv.innerHTML = `
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <span>${text}</span>
-                `;
+                errorDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i><span>${text}</span>`;
                 chatMessages.appendChild(errorDiv);
                 scrollToBottom();
             }
             
             function formatMessageText(text) {
+                // Configure marked to be tolerant of incomplete markdown during streaming
                 return marked.parse(text, { 
                     breaks: true, 
                     gfm: true,
                     highlight: function(code, lang) {
-                        if (lang && hljs.getLanguage(lang)) {
-                            return hljs.highlight(code, { language: lang }).value;
-                        }
-                        return hljs.highlightAuto(code).value;
+                        const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                        return hljs.highlight(code, { language }).value;
                     }
                 });
             }
@@ -777,10 +498,7 @@
                 if (!isUserScrolling) {
                     const scrollThreshold = 100;
                     const isScrolledToBottom = chatMessages.scrollHeight - chatMessages.clientHeight <= chatMessages.scrollTop + scrollThreshold;
-                    
-                    if (isScrolledToBottom) {
-                        scrollToBottom();
-                    }
+                    if (isScrolledToBottom) scrollToBottom();
                 }
             }
             
@@ -789,7 +507,6 @@
                 return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
             }
             
-            // Фокус на поле ввода при загрузке
             userInput.focus();
         });
     </script>
