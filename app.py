@@ -1,4 +1,4 @@
-# app.py (версия с исправленной логикой создания и обновления сессии)
+# app.py (исправленная версия с улучшенной обработкой ошибок и надежным сохранением истории)
 from dotenv import load_dotenv
 import os
 import traceback
@@ -17,22 +17,32 @@ from google.api_core import exceptions as google_api_exceptions
 
 app = Flask(__name__)
 
-# --- НОВАЯ СЕКЦИЯ: КОНФИГУРАЦИЯ БАЗЫ ДАННЫХ ---
+# --- КОНФИГУРАЦИЯ БАЗЫ ДАННЫХ С УЛУЧШЕННОЙ ОБРАБОТКОЙ ---
 db_url = os.environ.get('DATABASE_URL')
-if db_url and db_url.startswith("postgres://"):
+if not db_url:
+    # Используем SQLite по умолчанию для разработки
+    db_url = 'sqlite:///chat_app.db'
+    print("DATABASE_URL не найден, используется SQLite по умолчанию")
+elif db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
+
+try:
+    db = SQLAlchemy(app)
+    print("SQLAlchemy успешно инициализирован")
+except Exception as e:
+    print(f"КРИТИЧЕСКАЯ ОШИБКА при инициализации SQLAlchemy: {e}")
+    exit(1)
 # --- КОНЕЦ СЕКЦИИ КОНФИГУРАЦИИ БД ---
 
 
 # --- КОНФИГУРАЦИЯ GEMINI ---
 API_KEY_CONFIGURED = False
 GEMINI_CLIENT = None
-MODEL_NAME_DEFAULT = "gemini-2.5-flash"
-MAX_HISTORY_LENGTH = 20
+MODEL_NAME_DEFAULT = "gemini-1.5-flash" # Рекомендуется использовать более новые модели, если возможно
+MAX_HISTORY_LENGTH = 20 # Включая системные инструкции
 
 # Системная инструкция
 SYSTEM_INSTRUCTION = {
@@ -64,22 +74,46 @@ class ChatSession(db.Model):
     def __repr__(self):
         return f'<ChatSession for {self.user_id}>'
 
+# --- ФУНКЦИИ ВАЛИДАЦИИ ---
+def validate_user_id(user_id):
+    """Валидация user_id"""
+    if not user_id or not isinstance(user_id, str):
+        return False
+    if len(user_id) > 100 or len(user_id) < 1:
+        return False
+    return True
+
+def validate_message(message):
+    """Валидация сообщения"""
+    if not message or not isinstance(message, str):
+        return False
+    if len(message) > 10000:  # Ограничение на длину сообщения
+        return False
+    return True
+
 # --- Инициализация Gemini ---
 try:
     api_key_from_env = os.environ.get("GOOGLE_API_KEY")
     if not api_key_from_env:
         print("ПРЕДУПРЕЖДЕНИЕ: GOOGLE_API_KEY не найден в переменных окружения.")
     else:
-        GEMINI_CLIENT = genai.Client(api_key=api_key_from_env)
+        # Убрали `genai.Client` и используем `genai.configure` для совместимости
+        genai.configure(api_key=api_key_from_env)
+        GEMINI_CLIENT = genai.GenerativeModel(MODEL_NAME_DEFAULT)
         API_KEY_CONFIGURED = True
-        print(f"Клиент Google GenAI успешно инициализирован.")
+        print(f"Клиент Google GenAI успешно инициализирован для модели {MODEL_NAME_DEFAULT}.")
 except Exception as e:
     print(f"КРИТИЧЕСКАЯ ОШИБКА при инициализации клиента: {e}")
+    traceback.print_exc()
 
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    try:
+        return render_template("index.html")
+    except Exception as e:
+        print(f"Ошибка при рендеринге главной страницы: {e}")
+        return Response("Ошибка загрузки страницы", status=500)
 
 
 @app.route("/chat", methods=["POST"])
@@ -88,83 +122,133 @@ def handle_chat():
         return Response("Ошибка: Чат-сервис не сконфигурирован.", status=503)
 
     try:
+        if not request.is_json:
+            return Response("Ошибка: Запрос должен содержать JSON.", status=400)
+        
         req_data = request.json
+        if not req_data:
+            return Response("Ошибка: Пустой JSON запрос.", status=400)
+
         user_message_text = req_data.get("message")
         user_id = req_data.get("user_id")
 
-        if not all([user_message_text, user_id]):
-            return Response("Ошибка: В запросе отсутствуют message или user_id.", status=400)
-
-        # --- ИСПРАВЛЕННЫЙ БЛОК: ГАРАНТИРОВАННОЕ СОЗДАНИЕ/ЗАГРУЗКА СЕССИИ ---
-        session = ChatSession.query.get(user_id)
+        if not validate_user_id(user_id):
+            return Response("Ошибка: Некорректный user_id.", status=400)
         
-        if not session:
-            print(f"Создание и ПЕРВИЧНОЕ СОХРАНЕНИЕ новой сессии для user_id: {user_id}")
-            history = [SYSTEM_INSTRUCTION, SYSTEM_RESPONSE]
-            session = ChatSession(user_id=user_id, history=history)
-            db.session.add(session)
-            db.session.commit() # НЕМЕДЛЕННО СОХРАНЯЕМ, чтобы сессия точно была в БД
-        else:
-            print(f"Загружена существующая сессия для user_id: {user_id}")
-            history = session.history
+        if not validate_message(user_message_text):
+            return Response("Ошибка: Некорректное сообщение.", status=400)
 
-        # Добавляем текущее сообщение пользователя в локальную копию истории
-        history.append({'role': 'user', 'parts': [{'text': user_message_text}]})
+        # Загружаем или создаем сессию
+        history_for_api = None
+        
+        try:
+            session = db.session.get(ChatSession, user_id)
+            
+            if not session:
+                print(f"Создание новой сессии для user_id: {user_id}")
+                history_for_api = [SYSTEM_INSTRUCTION, SYSTEM_RESPONSE]
+                # НЕ добавляем сообщение пользователя здесь
+                new_session = ChatSession(user_id=user_id, history=history_for_api)
+                db.session.add(new_session)
+                db.session.commit()
+                print(f"Новая сессия для '{user_id}' успешно создана в БД")
+            else:
+                print(f"Загружена существующая сессия для user_id: {user_id}")
+                history_for_api = session.history
+                
+                if not isinstance(history_for_api, list):
+                    print(f"Некорректная история для '{user_id}', сбрасываем")
+                    history_for_api = [SYSTEM_INSTRUCTION, SYSTEM_RESPONSE]
+                    session.history = history_for_api
+                    db.session.commit()
 
-        # Обрезка истории, если она стала слишком длинной
-        if len(history) > MAX_HISTORY_LENGTH:
-            history = [SYSTEM_INSTRUCTION, SYSTEM_RESPONSE] + history[-MAX_HISTORY_LENGTH+2:]
-            print(f"История для '{user_id}' обрезана.")
+        except Exception as db_error:
+            print(f"!!! Ошибка при работе с БД для '{user_id}': {db_error}")
+            traceback.print_exc()
+            db.session.rollback()
+            return Response("Ошибка базы данных.", status=500)
 
-        print(f"Длина истории для '{user_id}' перед генерацией: {len(history)} сообщений.")
+        # *** ИЗМЕНЕНИЕ: ***
+        # Мы не модифицируем историю в базе данных *перед* запросом к API.
+        # Мы просто добавляем сообщение пользователя в *локальную копию* для отправки в API.
+        history_for_api.append({'role': 'user', 'parts': [{'text': user_message_text}]})
+        
+        print(f"Длина истории для '{user_id}' перед генерацией: {len(history_for_api)} сообщений.")
         
         # Конфигурация генерации
-        tools_config = [types.Tool(google_search=types.GoogleSearch())]
-        generate_config = types.GenerateContentConfig(
-            tools=tools_config,
-            safety_settings=[
-                types.SafetySetting(category='HARM_CATEGORY_HATE_SPEECH', threshold='BLOCK_NONE'),
-                types.SafetySetting(category='HARM_CATEGORY_HARASSMENT', threshold='BLOCK_NONE'),
-                types.SafetySetting(category='HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold='BLOCK_NONE'),
-                types.SafetySetting(category='HARM_CATEGORY_DANGEROUS_CONTENT', threshold='BLOCK_NONE'),
-            ]
-        )
+        safety_settings=[
+            types.SafetySetting(category='HARM_CATEGORY_HATE_SPEECH', threshold='BLOCK_NONE'),
+            types.SafetySetting(category='HARM_CATEGORY_HARASSMENT', threshold='BLOCK_NONE'),
+            types.SafetySetting(category='HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold='BLOCK_NONE'),
+            types.SafetySetting(category='HARM_CATEGORY_DANGEROUS_CONTENT', threshold='BLOCK_NONE'),
+        ]
 
         def generate_response_chunks():
             full_bot_response = ""
             try:
-                stream = GEMINI_CLIENT.models.generate_content_stream(
-                    model=MODEL_NAME_DEFAULT, contents=history, config=generate_config
+                stream = GEMINI_CLIENT.generate_content(
+                    contents=history_for_api, 
+                    safety_settings=safety_settings,
+                    stream=True
                 )
+                
                 for chunk in stream:
-                    if text_part := chunk.text:
-                        full_bot_response += text_part
-                        yield text_part
-                    if chunk.prompt_feedback and chunk.prompt_feedback.block_reason:
-                         error_msg = f"\n[СИСТЕМНОЕ УВЕДОМЛЕНИЕ: Запрос заблокирован: {chunk.prompt_feedback.block_reason.name}]"
-                         print(f"!!! Блокировка для '{user_id}': {chunk.prompt_feedback.block_reason.name}")
-                         yield error_msg
-                         return
+                    if hasattr(chunk, 'text') and chunk.text:
+                        full_bot_response += chunk.text
+                        yield chunk.text
+                    
+                    if hasattr(chunk, 'prompt_feedback') and chunk.prompt_feedback and chunk.prompt_feedback.block_reason:
+                        error_msg = f"\n[СИСТЕМНОЕ УВЕДОМЛЕНИЕ: Запрос заблокирован: {chunk.prompt_feedback.block_reason.name}]"
+                        print(f"!!! Блокировка для '{user_id}': {chunk.prompt_feedback.block_reason.name}")
+                        yield error_msg
+                        return # Прерываем, так как ответа не будет
 
-                # --- ИСПРАВЛЕННЫЙ БЛОК: ОБНОВЛЕНИЕ ИСТОРИИ В БД ---
-                with app.app_context():
-                    if full_bot_response:
-                        # ПОВТОРНО ЗАГРУЖАЕМ сессию внутри нового контекста, чтобы гарантировать ее актуальность
-                        session_to_update = db.session.get(ChatSession, user_id)
-                        if session_to_update:
-                            # Добавляем ответ бота в локальную историю
-                            history.append({'role': 'model', 'parts': [{'text': full_bot_response}]})
-                            # Присваиваем обновленную историю объекту сессии и сохраняем
-                            session_to_update.history = history
+                # --- ГЛАВНОЕ ИСПРАВЛЕНИЕ ДЛЯ POSTGRESQL ---
+                # Сохраняем историю только ПОСЛЕ того, как стриминг завершен.
+                # Это происходит вне основного контекста запроса Flask,
+                # поэтому нам нужен новый контекст приложения (`app.app_context`).
+                if full_bot_response.strip():
+                    try:
+                        with app.app_context():
+                            # 1. Загружаем сессию заново, чтобы работать с "живым" объектом БД
+                            session_to_update = db.session.get(ChatSession, user_id)
+                            if not session_to_update:
+                                print(f"!!! ОШИБКА: Сессия '{user_id}' исчезла во время генерации ответа.")
+                                return
+
+                            # 2. Берем текущую историю из БД
+                            updated_history = session_to_update.history
+                            
+                            # 3. Добавляем сообщение пользователя и ответ бота в одной транзакции
+                            updated_history.append({'role': 'user', 'parts': [{'text': user_message_text}]})
+                            updated_history.append({'role': 'model', 'parts': [{'text': full_bot_response}]})
+
+                            # 4. Обрезаем историю, если она стала слишком длинной
+                            if len(updated_history) > MAX_HISTORY_LENGTH:
+                                updated_history = [SYSTEM_INSTRUCTION, SYSTEM_RESPONSE] + updated_history[-(MAX_HISTORY_LENGTH - 2):]
+
+                            # 5. Сохраняем финальную, правильную историю
+                            session_to_update.history = updated_history
                             db.session.commit()
-                            print(f"История для '{user_id}' успешно ОБНОВЛЕНА в БД.")
-                        else:
-                            print(f"!!! КРИТИЧЕСКАЯ ОШИБКА: Не удалось найти сессию '{user_id}' для обновления.")
+                            print(f"История для '{user_id}' успешно обновлена в БД. Новая длина: {len(updated_history)}")
 
+                    except Exception as db_save_error:
+                        print(f"!!! Ошибка при сохранении в БД для '{user_id}': {db_save_error}")
+                        traceback.print_exc()
+                        with app.app_context():
+                           db.session.rollback()
+                else:
+                    print(f"Пустой ответ от Gemini для '{user_id}', не сохраняем в БД")
+
+            except google_api_exceptions.GoogleAPIError as api_error:
+                error_message = f"Ошибка Google API: {api_error}"
+                print(f"!!! Google API ошибка для '{user_id}': {api_error}")
+                yield error_message
             except Exception as e:
+                error_message = f"Извините, произошла внутренняя ошибка: {str(e)}"
                 print(f"!!! Ошибка во время стриминга для '{user_id}': {e}")
                 traceback.print_exc()
-                yield "Извините, произошла внутренняя ошибка при генерации ответа."
+                yield error_message
 
         return Response(generate_response_chunks(), mimetype='text/plain')
 
@@ -174,9 +258,39 @@ def handle_chat():
         return Response(f"Внутренняя ошибка сервера: {str(e)}", status=500)
 
 
+@app.errorhandler(404)
+def not_found(error):
+    return Response("Страница не найдена", status=404)
+
+
+@app.errorhandler(500)
+def internal_error(error):
+    try:
+        db.session.rollback()
+    except:
+        pass
+    return Response("Внутренняя ошибка сервера", status=500)
+
+
 if __name__ == "__main__":
     with app.app_context():
-        db.create_all()
-        print("Таблицы базы данных проверены/созданы.")
+        try:
+            db.create_all()
+            print("Таблицы базы данных проверены/созданы.")
+            # Тестируем подключение
+            db.session.query(ChatSession).first()
+            print("Подключение к базе данных работает корректно.")
+        except Exception as e:
+            print(f"!!! КРИТИЧЕСКАЯ ОШИБКА при инициализации БД: {e}")
+            traceback.print_exc()
+            print("Приложение не может запуститься без рабочей базы данных.")
+            exit(1)
 
-    app.run(host="localhost", port=5000, debug=False)
+    print("Запуск Flask приложения...")
+    try:
+        # Для продакшена лучше использовать Gunicorn или другой WSGI сервер
+        app.run(host="localhost", port=5000, debug=False)
+    except Exception as e:
+        print(f"!!! Ошибка при запуске Flask: {e}")
+        traceback.print_exc()
+        exit(1)
